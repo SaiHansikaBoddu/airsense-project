@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AirSense Dashboard</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+</head>
+<body>
+<div class="page-bg">
+    <header class="hero-header">
+        <div class="hero-left">
+            <h1>AirSense</h1>
+            <p>Smart AQI Predictor Dashboard</p>
+        </div>
+        <div class="hero-badge">Live Air Quality View</div>
+    </header>
+
+    <main class="main-container">
+
+        <section class="glass-card welcome-card">
+            <div class="welcome-text">
+                <h2>Welcome to AQI Predictor</h2>
+                <p>Upload your dataset, choose a location, explore the map, and understand whether the air is safe or not.</p>
+            </div>
+        </section>
+
+        <section class="top-grid">
+            <div class="glass-card">
+                <h3>Upload Dataset</h3>
+                <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+                    <input type="file" name="datafile" required>
+                    <button type="submit">Upload File</button>
+                </form>
+            </div>
+
+            <div class="glass-card">
+                <h3>Select Location</h3>
+                <form method="get" class="filter-form">
+                    <select name="city" onchange="this.form.submit()">
+                        <option value="" {% if selected_city == "" %}selected{% endif %} disabled>Select Location</option>
+                        {% for city in cities %}
+                        <option value="{{ city }}" {% if city == selected_city %}selected{% endif %}>
+                            {{ city }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </section>
+
+        <section class="content-grid">
+            <div class="glass-card map-card">
+                <h3>Select from Map</h3>
+                <div id="map"></div>
+            </div>
+
+            <div class="glass-card result-card">
+                <h3>Current AQI Value</h3>
+                <div class="aqi-main" style="border-top: 8px solid {{ aqi_color }};">
+                    <div class="city-name">
+                        {% if selected_city %}
+                            {{ selected_city }}
+                        {% else %}
+                            No Location Selected
+                        {% endif %}
+                    </div>
+                    <div class="aqi-number">{{ avg_aqi }}</div>
+                    <div class="aqi-status" style="background: {{ aqi_color }};">{{ aqi_status }}</div>
+                    <p class="aqi-message">{{ aqi_message }}</p>
+                </div>
+
+                <div class="legend-box">
+                    <h4>AQI Safety Guide</h4>
+                    <div class="legend-row"><span class="dot safe"></span> Safe</div>
+                    <div class="legend-row"><span class="dot acceptable"></span> Acceptable</div>
+                    <div class="legend-row"><span class="dot moderate"></span> Moderate</div>
+                    <div class="legend-row"><span class="dot poor"></span> Poor</div>
+                    <div class="legend-row"><span class="dot verypoor"></span> Very Poor</div>
+                    <div class="legend-row"><span class="dot hazardous"></span> Hazardous</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="glass-card chart-section">
+            <h3>Time-wise AQI Bar Chart</h3>
+            <div class="chart-box">
+                <canvas id="aqiBarChart"></canvas>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+<script>
+const mapData = {{ map_data | tojson }};
+const timeLabels = {{ time_labels | tojson }};
+const timeValues = {{ time_values | tojson }};
+
+function getColor(aqi) {
+    if (aqi <= 50) return "#2ecc71";
+    if (aqi <= 100) return "#f1c40f";
+    if (aqi <= 200) return "#f39c12";
+    if (aqi <= 300) return "#e74c3c";
+    if (aqi <= 400) return "#8e44ad";
+    return "#6e2c00";
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Map
+    const map = L.map("map");
+    map.setView([20, 77], 4);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    mapData.forEach(item => {
+        const marker = L.circleMarker([item.lat, item.lon], {
+            radius: 9,
+            color: getColor(item.aqi),
+            fillColor: getColor(item.aqi),
+            fillOpacity: 0.85,
+            weight: 2
+        }).addTo(map);
+
+        marker.bindPopup(
+            "<b>" + item.location + "</b><br>" +
+            "AQI: " + item.aqi
+        );
+
+        marker.on("click", () => {
+            window.location.href = "/?city=" + encodeURIComponent(item.location);
+        });
+    });
+
+    setTimeout(() => {
+        map.invalidateSize();
+    }, 500);
+
+    // Chart
+    new Chart(document.getElementById("aqiBarChart"), {
+        type: "bar",
+        data: {
+            labels: timeLabels,
+            datasets: [{
+                label: "AQI by Time",
+                data: timeValues,
+                backgroundColor: "rgba(52, 152, 219, 0.75)",
+                borderRadius: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: {
+                        color: "#234"
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: "#234",
+                        maxRotation: 0
+                    },
+                    grid: {
+                        color: "rgba(0,0,0,0.05)"
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: "#234"
+                    },
+                    grid: {
+                        color: "rgba(0,0,0,0.05)"
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+</body>
+</html>
