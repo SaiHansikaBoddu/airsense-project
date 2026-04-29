@@ -11,86 +11,121 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
+
 <body>
 <div class="page-bg">
-    <header class="hero-header">
-        <div class="hero-left">
-            <h1>AirSense</h1>
-            <p>Smart AQI Predictor Dashboard</p>
+
+    <header class="topbar-new">
+        <div class="brand-new">
+            <div class="brand-icon">AS</div>
+            <div class="brand-name">AirSense</div>
         </div>
-        <div class="hero-badge">Live Air Quality View</div>
+
+        <form action="/upload" method="POST" enctype="multipart/form-data" class="upload-form">
+            <input type="file" name="file" required>
+            <button type="submit">Upload</button>
+        </form>
+
+        <form method="get" class="search-form">
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input
+                    type="text"
+                    name="city"
+                    list="city-options"
+                    placeholder="Search location"
+                    value="{{ selected_city }}"
+                    class="search-input"
+                >
+                <datalist id="city-options">
+                    {% for city in cities %}
+                    <option value="{{ city }}"></option>
+                    {% endfor %}
+                </datalist>
+            </div>
+        </form>
+
+        <button class="location-btn">📍 My Location</button>
     </header>
 
-    <main class="main-container">
+    <main class="dashboard-grid">
 
-        <section class="glass-card welcome-card">
-            <div class="welcome-text">
-                <h2>Welcome to AQI Predictor</h2>
-                <p>Upload your dataset, choose a location, explore the map, and understand whether the air is safe or not.</p>
+        <section class="left-panel">
+            <div class="city-block">
+                <h1>{{ selected_city }}</h1>
+                <p>Location-based air quality overview</p>
+            </div>
+
+            <div class="main-aqi-card">
+                <div class="card-head">
+                    <div>
+                        <h3>Current Air Quality</h3>
+                        <p>Real-time measurements</p>
+                    </div>
+
+                    <div class="aqi-pill" style="color: {{ aqi_color }}; border-color: {{ aqi_color }};">
+                        AQI: {{ avg_aqi }}
+                    </div>
+                </div>
+
+                <div class="aqi-status-box">
+                    <div class="aqi-status-icon" style="color: {{ aqi_color }};">✔</div>
+                    <div class="aqi-status-title" style="color: {{ aqi_color }};">{{ aqi_status }}</div>
+                    <div class="aqi-status-message">{{ aqi_message }}</div>
+                </div>
+            </div>
+
+            <div class="pollutants-grid">
+                <div class="pollutant-card">
+                    <h4>PM2.5</h4>
+                    <div class="pollutant-value">{{ pm25 }}</div>
+                    <div class="pollutant-unit">µg/m³</div>
+                </div>
+
+                <div class="pollutant-card">
+                    <h4>PM10</h4>
+                    <div class="pollutant-value">{{ pm10 }}</div>
+                    <div class="pollutant-unit">µg/m³</div>
+                </div>
+
+                <div class="pollutant-card">
+                    <h4>NO₂</h4>
+                    <div class="pollutant-value">{{ no2 }}</div>
+                    <div class="pollutant-unit">µg/m³</div>
+                </div>
+
+                <div class="pollutant-card">
+                    <h4>CO</h4>
+                    <div class="pollutant-value">{{ co }}</div>
+                    <div class="pollutant-unit">mg/m³</div>
+                </div>
             </div>
         </section>
 
-        <section class="top-grid">
-            <div class="glass-card">
-                <h3>Upload Dataset</h3>
-                <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
-                    <input type="file" name="datafile" required>
-                    <button type="submit">Upload File</button>
-                </form>
-            </div>
-
-            <div class="glass-card">
-                <h3>Select Location</h3>
-                <form method="get" class="filter-form">
-                    <select name="city" onchange="this.form.submit()">
-                        <option value="" {% if selected_city == "" %}selected{% endif %} disabled>Select Location</option>
-                        {% for city in cities %}
-                        <option value="{{ city }}" {% if city == selected_city %}selected{% endif %}>
-                            {{ city }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </form>
-            </div>
-        </section>
-
-        <section class="content-grid">
-            <div class="glass-card map-card">
-                <h3>Select from Map</h3>
+        <section class="right-panel">
+            <div class="map-card">
                 <div id="map"></div>
             </div>
 
-            <div class="glass-card result-card">
-                <h3>Current AQI Value</h3>
-                <div class="aqi-main" style="border-top: 8px solid {{ aqi_color }};">
-                    <div class="city-name">
-                        {% if selected_city %}
-                            {{ selected_city }}
-                        {% else %}
-                            No Location Selected
-                        {% endif %}
+            <div class="charts-card">
+                <h2>Air Quality Insights</h2>
+
+                <div class="charts-grid-new">
+                    <div class="chart-item">
+                        <h4>24H AQI Trend</h4>
+                        <canvas id="aqiLineChart"></canvas>
                     </div>
-                    <div class="aqi-number">{{ avg_aqi }}</div>
-                    <div class="aqi-status" style="background: {{ aqi_color }};">{{ aqi_status }}</div>
-                    <p class="aqi-message">{{ aqi_message }}</p>
-                </div>
 
-                <div class="legend-box">
-                    <h4>AQI Safety Guide</h4>
-                    <div class="legend-row"><span class="dot safe"></span> Safe</div>
-                    <div class="legend-row"><span class="dot acceptable"></span> Acceptable</div>
-                    <div class="legend-row"><span class="dot moderate"></span> Moderate</div>
-                    <div class="legend-row"><span class="dot poor"></span> Poor</div>
-                    <div class="legend-row"><span class="dot verypoor"></span> Very Poor</div>
-                    <div class="legend-row"><span class="dot hazardous"></span> Hazardous</div>
-                </div>
-            </div>
-        </section>
+                    <div class="chart-item">
+                        <h4>Pollutants Breakdown</h4>
+                        <canvas id="aqiBarChart"></canvas>
+                    </div>
 
-        <section class="glass-card chart-section">
-            <h3>Time-wise AQI Bar Chart</h3>
-            <div class="chart-box">
-                <canvas id="aqiBarChart"></canvas>
+                    <div class="chart-item">
+                        <h4>Composition</h4>
+                        <canvas id="aqiPieChart"></canvas>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -99,95 +134,210 @@
 
 <script>
 const mapData = {{ map_data | tojson }};
-const timeLabels = {{ time_labels | tojson }};
-const timeValues = {{ time_values | tojson }};
+const trendLabels = {{ trend_labels | tojson }};
+const trendAqi = {{ trend_aqi | tojson }};
+const trendPm25 = {{ trend_pm25 | tojson }};
+const pollutantLabels = {{ pollutant_labels | tojson }};
+const pollutantValues = {{ pollutant_values | tojson }};
+const centerLat = {{ center_lat }};
+const centerLon = {{ center_lon }};
+const zoomLevel = {{ zoom_level }};
 
 function getColor(aqi) {
-    if (aqi <= 50) return "#2ecc71";
-    if (aqi <= 100) return "#f1c40f";
+    if (aqi <= 50) return "#19c37d";
+    if (aqi <= 100) return "#f4b400";
     if (aqi <= 200) return "#f39c12";
     if (aqi <= 300) return "#e74c3c";
-    if (aqi <= 400) return "#8e44ad";
-    return "#6e2c00";
+    return "#8e44ad";
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-    // Map
-    const map = L.map("map");
-    map.setView([20, 77], 4);
+
+    const map = L.map("map").setView([centerLat, centerLon], zoomLevel);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 18,
-        attribution: '&copy; OpenStreetMap contributors'
+        maxZoom: 18
     }).addTo(map);
 
     mapData.forEach(item => {
+        const color = getColor(item.aqi);
+
         const marker = L.circleMarker([item.lat, item.lon], {
-            radius: 9,
-            color: getColor(item.aqi),
-            fillColor: getColor(item.aqi),
-            fillOpacity: 0.85,
+            radius: 8,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.9,
             weight: 2
         }).addTo(map);
 
-        marker.bindPopup(
-            "<b>" + item.location + "</b><br>" +
-            "AQI: " + item.aqi
-        );
+        marker.bindPopup(`
+            <b>${item.location}</b><br>
+            AQI: ${Number(item.aqi).toFixed(2)}
+        `);
 
         marker.on("click", () => {
             window.location.href = "/?city=" + encodeURIComponent(item.location);
         });
     });
 
-    setTimeout(() => {
-        map.invalidateSize();
-    }, 500);
+    setTimeout(() => map.invalidateSize(), 400);
 
-    // Chart
+    const commonChartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: "index",
+            intersect: false
+        },
+        plugins: {
+            tooltip: {
+                enabled: true,
+                backgroundColor: "#0f172a",
+                titleColor: "#ffffff",
+                bodyColor: "#ffffff",
+                padding: 12,
+                titleFont: {
+                    size: 13,
+                    weight: "bold"
+                },
+                bodyFont: {
+                    size: 13,
+                    weight: "bold"
+                },
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ": " + context.parsed.y;
+                    }
+                }
+            },
+            legend: {
+                labels: {
+                    font: {
+                        size: 12,
+                        weight: "bold"
+                    },
+                    boxWidth: 14,
+                    usePointStyle: true
+                }
+            }
+        },
+        scales: {
+            x: {
+                ticks: {
+                    font: { size: 11 },
+                    maxRotation: 0,
+                    minRotation: 0
+                },
+                grid: {
+                    color: "rgba(148,163,184,0.18)"
+                }
+            },
+            y: {
+                ticks: {
+                    font: { size: 11 }
+                },
+                grid: {
+                    color: "rgba(148,163,184,0.18)"
+                }
+            }
+        }
+    };
+
+    new Chart(document.getElementById("aqiLineChart"), {
+        type: "line",
+        data: {
+            labels: trendLabels,
+            datasets: [
+                {
+                    label: "AQI",
+                    data: trendAqi,
+                    borderColor: "#2563eb",
+                    backgroundColor: "rgba(37,99,235,0.15)",
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 7,
+                    fill: true
+                },
+                {
+                    label: "PM2.5",
+                    data: trendPm25,
+                    borderColor: "#10b981",
+                    backgroundColor: "rgba(16,185,129,0.15)",
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 7,
+                    fill: true
+                }
+            ]
+        },
+        options: commonChartOptions
+    });
+
     new Chart(document.getElementById("aqiBarChart"), {
         type: "bar",
         data: {
-            labels: timeLabels,
+            labels: pollutantLabels,
             datasets: [{
-                label: "AQI by Time",
-                data: timeValues,
-                backgroundColor: "rgba(52, 152, 219, 0.75)",
-                borderRadius: 10
+                label: "Pollutant Value",
+                data: pollutantValues,
+                backgroundColor: ["#38bdf8", "#fb7185", "#fb923c", "#facc15"],
+                borderRadius: 10,
+                borderSkipped: false
+            }]
+        },
+        options: commonChartOptions
+    });
+
+    new Chart(document.getElementById("aqiPieChart"), {
+        type: "doughnut",
+        data: {
+            labels: pollutantLabels,
+            datasets: [{
+                label: "Composition",
+                data: pollutantValues,
+                backgroundColor: ["#38bdf8", "#fb7185", "#fb923c", "#facc15"],
+                borderColor: "#ffffff",
+                borderWidth: 4,
+                hoverOffset: 12
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
+                tooltip: {
+                    enabled: true,
+                    backgroundColor: "#0f172a",
+                    titleColor: "#ffffff",
+                    bodyColor: "#ffffff",
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ": " + context.parsed;
+                        }
+                    }
+                },
                 legend: {
+                    position: "bottom",
                     labels: {
-                        color: "#234"
+                        font: {
+                            size: 11,
+                            weight: "bold"
+                        },
+                        boxWidth: 12,
+                        usePointStyle: true,
+                        padding: 12
                     }
                 }
             },
-            scales: {
-                x: {
-                    ticks: {
-                        color: "#234",
-                        maxRotation: 0
-                    },
-                    grid: {
-                        color: "rgba(0,0,0,0.05)"
-                    }
-                },
-                y: {
-                    ticks: {
-                        color: "#234"
-                    },
-                    grid: {
-                        color: "rgba(0,0,0,0.05)"
-                    }
-                }
-            }
+            cutout: "65%"
         }
     });
+
 });
 </script>
+
 </body>
 </html>

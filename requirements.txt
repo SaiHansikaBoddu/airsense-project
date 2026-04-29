@@ -4,3 +4,5 @@ numpy
 openpyxl
 gunicorn
 werkzeug
+sqlalchemy
+pyodbc
