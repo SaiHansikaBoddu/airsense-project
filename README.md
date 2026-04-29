@@ -26,7 +26,7 @@ AirSense is a web-based application that provides **location-based air quality i
 5. Users can explore via map and charts
 
 ## 🌐 Live Demo
-👉 https://airsense-analytics.azurewebsites.net
+👉 https://airsense-analytics-bkfpbfc8ffhhgtbz.centralindia-01.azurewebsites.net
 
 
 ## 🎯 Use Cases
